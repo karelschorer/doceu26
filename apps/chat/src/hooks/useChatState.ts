@@ -122,6 +122,22 @@ export function useChatState(user: AuthUser | null) {
     loadChannels();
   }, [loadChannels]);
 
+  /* ── Load groups from API ──────────────────────────────────────────── */
+
+  const loadGroups = useCallback(() => {
+    if (!USER_UUID) return;
+    fetch(`/api/v1/chat/groups?user=${encodeURIComponent(USER_UUID)}`)
+      .then((r) => r.json())
+      .then((gs: Group[]) => {
+        if (Array.isArray(gs)) setGroups(gs);
+      })
+      .catch(() => {});
+  }, [USER_UUID]);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
+
   /* ── Team creation ───────────────────────────────────────────────── */
 
   const createTeam = useCallback(
@@ -196,7 +212,7 @@ export function useChatState(user: AuthUser | null) {
   const createGroup = useCallback(
     (memberIds: string[]) => {
       const allIds = Array.from(new Set([USER_UUID, ...memberIds])).sort();
-      const groupKey = `group:${allIds.join('_')}`;
+      const groupKey = allIds.join('_');
 
       const existing = groups.find((g) => g.id === groupKey);
       if (existing) {
@@ -207,24 +223,41 @@ export function useChatState(user: AuthUser | null) {
         return;
       }
 
-      const memberNames = memberIds
-        .map((id) => dms.find((d) => d.id === id)?.name ?? id)
-        .join(', ');
-      const newGroup: Group = {
-        id: groupKey,
-        name: memberNames,
-        members: allIds,
-        memberNames: memberIds.map((id) => dms.find((d) => d.id === id)?.name ?? id),
-        created_by: USER_UUID,
-        created_at: new Date().toISOString(),
-      };
-      setGroups((prev) => [...prev, newGroup]);
-      setActiveGroupId(groupKey);
-      setActiveDMId(null);
-      setActiveTeamId(null);
-      setShowCreateGroup(false);
+      const resolveName = (id: string) =>
+        id === USER_UUID
+          ? (user?.display_name ?? id)
+          : (dms.find((d) => d.id === id)?.name ?? id);
+
+      const groupName = memberIds.map(resolveName).join(', ');
+
+      fetch('/api/v1/chat/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: groupKey,
+          name: groupName,
+          members: allIds,
+          member_names: allIds.map(resolveName),
+          created_by: USER_UUID,
+        }),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('create group failed');
+          return r.json();
+        })
+        .then((newGroup: Group) => {
+          setGroups((prev) => {
+            if (prev.find((g) => g.id === newGroup.id)) return prev;
+            return [...prev, newGroup];
+          });
+          setActiveGroupId(newGroup.id);
+          setActiveDMId(null);
+          setActiveTeamId(null);
+          setShowCreateGroup(false);
+        })
+        .catch(() => alert('Failed to create group'));
     },
-    [USER_UUID, dms, groups],
+    [USER_UUID, user?.display_name, dms, groups],
   );
 
   return {
@@ -282,6 +315,7 @@ export function useChatState(user: AuthUser | null) {
     showCreateGroup,
     setShowCreateGroup,
     createGroup,
+    loadGroups,
 
     // Sidebar UI
     sidebarOpen,

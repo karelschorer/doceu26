@@ -81,8 +81,8 @@ export const GroupList: React.FC<GroupListProps> = ({
             const isActive = group.id === activeGroupId;
             const isGroupHovered = group.id === hoveredGroupId;
             const memberSummary =
-              group.memberNames.slice(0, 3).join(', ') +
-              (group.memberNames.length > 3 ? ` +${group.memberNames.length - 3}` : '');
+              group.member_names.slice(0, 3).join(', ') +
+              (group.member_names.length > 3 ? ` +${group.member_names.length - 3}` : '');
 
             return (
               <button

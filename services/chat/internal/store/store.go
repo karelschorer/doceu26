@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS channels (
 
 CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
-    channel_id TEXT NOT NULL REFERENCES channels(id),
+    channel_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     user_display_name TEXT NOT NULL DEFAULT '',
     content TEXT NOT NULL,
@@ -28,7 +28,19 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Drop legacy FK constraint if it exists so DM/group channel IDs are accepted
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_channel_id_fkey;
+
 CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at);
+
+CREATE TABLE IF NOT EXISTS groups (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    members TEXT[] NOT NULL,
+    member_names TEXT[] NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 INSERT INTO channels (id, name, is_private, created_by) VALUES
   ('general', 'general', false, 'system'),
@@ -162,4 +174,36 @@ func (s *Store) DeleteChannel(id string) error {
 	}
 	_, err := s.db.Exec(`DELETE FROM channels WHERE id = $1`, id)
 	return err
+}
+
+func (s *Store) CreateGroup(g *model.Group) error {
+	_, err := s.db.Exec(
+		`INSERT INTO groups (id, name, members, member_names, created_by, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (id) DO NOTHING`,
+		g.ID, g.Name, g.Members, g.MemberNames, g.CreatedBy, g.CreatedAt,
+	)
+	return err
+}
+
+func (s *Store) ListGroupsByMember(userUUID string) ([]*model.Group, error) {
+	rows, err := s.db.Query(
+		`SELECT id, name, members, member_names, created_by, created_at
+		 FROM groups WHERE $1 = ANY(members) ORDER BY created_at`,
+		userUUID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []*model.Group
+	for rows.Next() {
+		g := &model.Group{}
+		if err := rows.Scan(&g.ID, &g.Name, &g.Members, &g.MemberNames, &g.CreatedBy, &g.CreatedAt); err != nil {
+			return nil, err
+		}
+		groups = append(groups, g)
+	}
+	return groups, rows.Err()
 }
