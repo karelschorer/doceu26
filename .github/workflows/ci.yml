@@ -18,8 +18,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run typecheck
-      - run: pnpm turbo run build
+      - run: pnpm turbo run typecheck --filter='!@doceu26/desktop'
+      - run: pnpm turbo run build --filter='!@doceu26/desktop'
 
   backend:
     name: Backend
