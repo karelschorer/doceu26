@@ -67,6 +67,18 @@ func main() {
 		go h.ServeClient(client)
 	})
 
+	// REST API: Groups
+	mux.HandleFunc("/api/v1/chat/groups", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handleListGroups(w, r, s)
+		case http.MethodPost:
+			handleCreateGroup(w, r, s, h)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// REST API: Channels
 	mux.HandleFunc("/api/v1/chat/channels", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -186,4 +198,73 @@ func handleGetMessages(w http.ResponseWriter, r *http.Request, s *store.Store, c
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
+}
+
+func handleListGroups(w http.ResponseWriter, r *http.Request, s *store.Store) {
+	userUUID := r.URL.Query().Get("user")
+	if userUUID == "" {
+		http.Error(w, "user query param required", http.StatusBadRequest)
+		return
+	}
+	groups, err := s.ListGroupsByMember(userUUID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if groups == nil {
+		groups = []*model.Group{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groups)
+}
+
+func handleCreateGroup(w http.ResponseWriter, r *http.Request, s *store.Store, h *hub.Hub) {
+	var req struct {
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Members     []string `json:"members"`
+		MemberNames []string `json:"member_names"`
+		CreatedBy   string   `json:"created_by"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" || req.Name == "" || len(req.Members) < 2 || req.CreatedBy == "" {
+		http.Error(w, "id, name, members (min 2), and created_by are required", http.StatusBadRequest)
+		return
+	}
+
+	g := &model.Group{
+		ID:          req.ID,
+		Name:        req.Name,
+		Members:     req.Members,
+		MemberNames: req.MemberNames,
+		CreatedBy:   req.CreatedBy,
+		CreatedAt:   time.Now().UTC(),
+	}
+
+	if err := s.CreateGroup(g); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Notify all group members (except the creator) via WebSocket so they see the new group
+	notification, err := json.Marshal(map[string]any{
+		"type":  "group_created",
+		"group": g,
+	})
+	if err != nil {
+		log.Printf("marshal group_created notification: %v", err)
+	} else {
+		for _, memberUUID := range req.Members {
+			if memberUUID != req.CreatedBy {
+				h.SendToUser(memberUUID, notification)
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(g)
 }
