@@ -87,7 +87,7 @@ jobs:
 
       - name: Deploy frontend
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/key.pem" \
+          rsync -avz --delete --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/key.pem" \
             apps/web/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26/
 
       - name: Deploy services
