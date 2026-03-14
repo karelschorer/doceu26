@@ -32,13 +32,13 @@ export function ChatPage() {
     newChannelName, setNewChannelName,
     dms, dmSearch, setDmSearch, filteredDMs,
     hoveredDMId, setHoveredDMId,
-    groups, showCreateGroup, setShowCreateGroup, createGroup,
+    groups, showCreateGroup, setShowCreateGroup, createGroup, loadGroups,
     sidebarOpen, setSidebarOpen,
     activeThread, setActiveThread,
   } = chatState;
 
   const { wsConnected, messagesByChannel, sendMessage } = useChatConnection(
-    user, activeKey, activeChannelId, activeDMId, activeGroupId,
+    user, activeKey, activeChannelId, activeDMId, activeGroupId, loadGroups,
   );
 
   const webrtc = useWebRTC(

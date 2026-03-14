@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/lib/pq"
+)
 
 type Channel struct {
 	ID        string    `json:"id"`
@@ -18,4 +22,13 @@ type Message struct {
 	Content         string    `json:"content"`
 	Type            string    `json:"type"`
 	CreatedAt       time.Time `json:"created_at"`
+}
+
+type Group struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Members     pq.StringArray `json:"members"`
+	MemberNames pq.StringArray `json:"member_names"`
+	CreatedBy   string         `json:"created_by"`
+	CreatedAt   time.Time      `json:"created_at"`
 }

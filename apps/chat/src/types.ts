@@ -47,7 +47,7 @@ export interface Group {
   id: string;
   name: string;
   members: string[]; // user UUIDs
-  memberNames: string[]; // display names
+  member_names: string[]; // display names
   created_by: string;
   created_at: string;
 }

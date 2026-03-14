@@ -24,6 +24,7 @@ export function useChatConnection(
   activeChannelId: string,
   activeDMId: string | null,
   activeGroupId: string | null,
+  onGroupCreated?: () => void,
 ) {
   const USER_ID = user?.display_name ?? '';
   const USER_UUID = user?.id ?? '';
@@ -42,7 +43,7 @@ export function useChatConnection(
     const channelId = activeDMId
       ? `dm:${[USER_UUID, activeDMId].sort().join('_')}`
       : activeGroupId
-        ? activeGroupId
+        ? `group:${activeGroupId}`
         : activeChannelId;
     fetch(`/api/v1/chat/channels/${encodeURIComponent(channelId)}/messages?limit=50`)
       .then((r) => (r.ok ? r.json() : []))
@@ -80,6 +81,10 @@ export function useChatConnection(
           sentMsgIds.current.delete(msg.id);
           return;
         }
+        if (msg.type === 'group_created') {
+          onGroupCreated?.();
+          return;
+        }
         if (msg.type !== 'dm' || !msg.sender_uuid) return;
         const storeKey = `dm:${msg.sender_uuid}`;
         setMessagesByChannel((prev) => ({
@@ -104,8 +109,13 @@ export function useChatConnection(
 
     // DM mode: connect to RECIPIENT's personal inbox channel so we can deliver to them.
     //          Incoming DMs to us arrive via our own inboxWsRef (user_${USER_UUID}), not here.
+    // Group mode: connect to shared group channel.
     // Channel mode: connect to the shared channel as before.
-    const wsChannel = activeDMId ? `user_${activeDMId}` : activeChannelId;
+    const wsChannel = activeDMId
+      ? `user_${activeDMId}`
+      : activeGroupId
+        ? `group:${activeGroupId}`
+        : activeChannelId;
 
     const ws = new WebSocket(wsUrl(wsChannel, USER_ID, USER_UUID));
     wsRef.current = ws;
@@ -130,7 +140,7 @@ export function useChatConnection(
         if (msg.type && msg.type !== 'text') return; // signals handled by signalWsRef
         setMessagesByChannel((prev) => ({
           ...prev,
-          [activeChannelId]: [...(prev[activeChannelId] ?? []), msg],
+          [activeKey]: [...(prev[activeKey] ?? []), msg],
         }));
       } catch {
         /* ignore */
@@ -141,7 +151,7 @@ export function useChatConnection(
       ws.close();
       if (wsRef.current === ws) wsRef.current = null;
     };
-  }, [activeChannelId, activeDMId, USER_ID, USER_UUID]);
+  }, [activeChannelId, activeDMId, activeGroupId, activeKey, USER_ID, USER_UUID]);
 
   /* ── Send message ──────────────────────────────────────────────────── */
 
@@ -158,7 +168,9 @@ export function useChatConnection(
         timestamp: Date.now(),
         channel_id: activeDMId
           ? `dm:${[USER_UUID, activeDMId].sort().join('_')}`
-          : activeChannelId,
+          : activeGroupId
+            ? `group:${activeGroupId}`
+            : activeChannelId,
         // DM messages carry type + sender_uuid so the recipient's inbox WS can route them
         ...(activeDMId ? { type: 'dm', sender_uuid: USER_UUID } : {}),
       };
@@ -173,7 +185,7 @@ export function useChatConnection(
         wsRef.current.send(JSON.stringify(msg));
       }
     },
-    [activeKey, USER_ID, USER_UUID, activeDMId, activeChannelId],
+    [activeKey, USER_ID, USER_UUID, activeDMId, activeGroupId, activeChannelId],
   );
 
   return {
