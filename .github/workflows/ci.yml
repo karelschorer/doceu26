@@ -33,16 +33,27 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-          cache-dependency-path: services/go.work.sum
       - name: Build
         working-directory: services
-        run: go build ./...
+        run: |
+          for mod in $(go work edit -json | jq -r '.Use[].DiskPath'); do
+            echo "Building $mod..."
+            (cd "$mod" && go build ./...)
+          done
       - name: Test
         working-directory: services
-        run: go test ./...
+        run: |
+          for mod in $(go work edit -json | jq -r '.Use[].DiskPath'); do
+            echo "Testing $mod..."
+            (cd "$mod" && go test ./...)
+          done
       - name: Vet
         working-directory: services
-        run: go vet ./...
+        run: |
+          for mod in $(go work edit -json | jq -r '.Use[].DiskPath'); do
+            echo "Vetting $mod..."
+            (cd "$mod" && go vet ./...)
+          done
 
   deploy:
     name: Deploy to EC2
