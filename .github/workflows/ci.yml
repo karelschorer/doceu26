@@ -89,6 +89,14 @@ jobs:
           rsync -avz --delete --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/key.pem" \
             apps/shell/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26/
 
+      - name: Deploy nginx config
+        run: |
+          scp -i ~/.ssh/key.pem infra/nginx/nginx.conf ec2-user@${{ secrets.EC2_HOST }}:/tmp/nginx.conf
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "\
+            sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf && \
+            sudo nginx -t && \
+            sudo systemctl reload nginx"
+
       - name: Deploy services
         run: |
           scp -i ~/.ssh/key.pem services/chat/chat-service ec2-user@${{ secrets.EC2_HOST }}:/tmp/chat-service
@@ -126,6 +134,14 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/key.pem
           chmod 600 ~/.ssh/key.pem
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy nginx config
+        run: |
+          scp -i ~/.ssh/key.pem infra/nginx/nginx.conf ec2-user@${{ secrets.EC2_HOST }}:/tmp/nginx.conf
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "\
+            sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf && \
+            sudo nginx -t && \
+            sudo systemctl reload nginx"
 
       - name: Deploy demo frontend
         run: |
