@@ -13,6 +13,27 @@ import (
 	sharedmiddleware "github.com/doceu26/shared/pkg/middleware"
 )
 
+func seedDefaultUsers(authSvc *service.AuthService) {
+	seeds := []struct {
+		email, displayName, password string
+		role                         string
+	}{
+		{"karel@doceu26.eu", "Karel Schorer", "DocEU26!", "admin"},
+		{"demo@doceu26.eu", "Demo User", "DocEU26!", "member"},
+	}
+	for _, s := range seeds {
+		u, err := authSvc.Register(s.email, s.displayName, s.password)
+		if err != nil {
+			log.Printf("seed: skipping %s (%v)", s.email, err)
+			continue
+		}
+		if s.role == "admin" {
+			authSvc.UpdateUserRole(u.ID, "admin")
+		}
+		log.Printf("seed: created user %s (%s)", s.displayName, s.email)
+	}
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -21,6 +42,7 @@ func main() {
 
 	userStore := store.NewInMemoryUserStore()
 	authService := service.NewAuthService(userStore, os.Getenv("JWT_SECRET"))
+	seedDefaultUsers(authService)
 	h := handler.NewHandler(authService)
 
 	mux := http.NewServeMux()
