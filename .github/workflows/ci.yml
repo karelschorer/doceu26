@@ -145,6 +145,6 @@ jobs:
 
       - name: Deploy demo frontend
         run: |
-          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/doceu26-demo"
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/doceu26-demo/demo"
           rsync -avz --delete --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/key.pem" \
-            apps/shell/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26-demo/
+            apps/shell/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26-demo/demo/
