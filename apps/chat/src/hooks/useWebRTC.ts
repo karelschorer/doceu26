@@ -153,10 +153,9 @@ export function useWebRTC(
   /* ── acquireMedia ──────────────────────────────────────────────────── */
 
   const acquireMedia = useCallback(async (): Promise<MediaStream | null> => {
-    // mediaDevices requires a secure context (HTTPS or localhost).
-    // On HTTP we still attempt the call — signaling works, just no local media.
-    if (!navigator.mediaDevices?.getUserMedia) {
-      console.warn('navigator.mediaDevices unavailable (insecure context). Proceeding without local media.');
+    // Check if mediaDevices API is available (requires HTTPS or localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Your browser does not support camera/microphone access. Make sure you are using HTTPS.');
       return null;
     }
 
@@ -303,24 +302,30 @@ export function useWebRTC(
     setCallIsGroup(false);
 
     const stream = await acquireMedia();
+    if (!stream) {
+      alert(
+        'Could not access camera or microphone.\n\nPlease check:\n' +
+          '\u2022 Camera/mic permissions in your browser\n' +
+          '\u2022 That no other app is using the camera\n' +
+          '\u2022 That your device has a camera/microphone',
+      );
+      setCallState('idle');
+      return;
+    }
 
     try {
-      if (stream) {
-        localStreamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      }
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
       const pc = createPCForPeer(targetUUID);
-      if (stream) {
-        stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-      }
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       sendSignal({ type: 'call_offer', payload: offer }, targetUUID);
       setCallState('outgoing');
     } catch (err) {
       console.error('Failed to start call (WebRTC):', err);
-      stream?.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((t) => t.stop());
       alert('Failed to set up the call connection. Please try again.');
       setCallState('idle');
     }
