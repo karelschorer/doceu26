@@ -9,7 +9,9 @@ Web-first, with desktop (Tauri v2) and mobile planned.
 
 ```
 apps/
-  web/          — React 19 + Vite frontend (main app)
+  shell/        — Platform shell (auth, routing, navigation, home, admin)
+  chat/         — Agora: messaging + WebRTC video calls (standalone app)
+  web/          — [LEGACY] Old monolithic frontend — being replaced by shell + per-app packages
   desktop/      — Tauri v2 desktop wrapper (do NOT build in CI)
   storybook/    — Component playground
 packages/
@@ -59,7 +61,7 @@ proto/          — Protobuf definitions
 ```bash
 pnpm install                          # install all deps
 pnpm turbo run build                  # build all packages
-cd apps/web && pnpm vite dev          # run web dev server
+cd apps/shell && pnpm vite dev        # run web dev server (platform shell)
 cd services/auth && go run ./cmd/server/   # run auth service
 cd services/chat && go run ./cmd/server/   # run chat service
 ```
@@ -108,7 +110,7 @@ Auth service seeds two users on startup:
 ## Key Conventions
 
 - Never run API servers directly — tell the user how to run them
-- Frontend builds: `cd apps/web && pnpm vite build` (turbo has issues locally without packageManager)
+- Frontend builds: `cd apps/shell && pnpm vite build` (turbo has issues locally without packageManager)
 - Go cross-compile for EC2: `GOOS=linux GOARCH=amd64 go build -o <name> ./cmd/server/`
 - Chat/video calls use WebRTC with WebSocket signaling through the chat service
 - The web app is responsive (mobile-first for Agora/chat features)

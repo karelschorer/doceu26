@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -88,7 +87,15 @@ jobs:
       - name: Deploy frontend
         run: |
           rsync -avz --delete --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/key.pem" \
-            apps/web/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26/
+            apps/shell/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26/
+
+      - name: Deploy nginx config
+        run: |
+          scp -i ~/.ssh/key.pem infra/nginx/nginx.conf ec2-user@${{ secrets.EC2_HOST }}:/tmp/nginx.conf
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "\
+            sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf && \
+            sudo nginx -t && \
+            sudo systemctl reload nginx"
 
       - name: Deploy services
         run: |
@@ -101,3 +108,43 @@ jobs:
             sudo cp /tmp/auth-service /opt/doceu26/bin/auth-service && \
             sudo systemctl start doceu26-chat && \
             sudo systemctl start doceu26-auth"
+
+  deploy-demo:
+    name: Deploy Demo
+    needs: [frontend]
+    if: github.ref != 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build frontend with /demo/ base path
+        run: pnpm turbo run build --filter='@doceu26/shell'
+        env:
+          VITE_BASE: /demo/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/key.pem
+          chmod 600 ~/.ssh/key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy nginx config
+        run: |
+          scp -i ~/.ssh/key.pem infra/nginx/nginx.conf ec2-user@${{ secrets.EC2_HOST }}:/tmp/nginx.conf
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "\
+            sudo cp /tmp/nginx.conf /etc/nginx/nginx.conf && \
+            sudo nginx -t && \
+            sudo systemctl reload nginx"
+
+      - name: Deploy demo frontend
+        run: |
+          ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "sudo mkdir -p /var/www/doceu26-demo/demo"
+          rsync -avz --delete --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/key.pem" \
+            apps/shell/dist/ ec2-user@${{ secrets.EC2_HOST }}:/var/www/doceu26-demo/demo/
