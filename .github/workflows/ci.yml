@@ -95,7 +95,9 @@ jobs:
           scp -i ~/.ssh/key.pem services/chat/chat-service ec2-user@${{ secrets.EC2_HOST }}:/tmp/chat-service
           scp -i ~/.ssh/key.pem services/auth/auth-service ec2-user@${{ secrets.EC2_HOST }}:/tmp/auth-service
           ssh -i ~/.ssh/key.pem ec2-user@${{ secrets.EC2_HOST }} "\
+            sudo systemctl stop doceu26-chat && \
+            sudo systemctl stop doceu26-auth && \
             sudo cp /tmp/chat-service /opt/doceu26/bin/chat-service && \
             sudo cp /tmp/auth-service /opt/doceu26/bin/auth-service && \
-            sudo systemctl restart doceu26-chat && \
-            sudo systemctl restart doceu26-auth"
+            sudo systemctl start doceu26-chat && \
+            sudo systemctl start doceu26-auth"
