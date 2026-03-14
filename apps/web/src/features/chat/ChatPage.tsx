@@ -222,6 +222,8 @@ export function ChatPage() {
 
   const [dmSearch, setDmSearch] = useState('');
   const [hoveredDMId, setHoveredDMId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const wsRef = useRef<WebSocket | null>(null);
   const inboxWsRef = useRef<WebSocket | null>(null); // persistent personal inbox WS
@@ -943,8 +945,8 @@ export function ChatPage() {
             {callState === 'connected' && remoteStreams.size > 0 ? (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: remoteStreams.size === 1 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: 4, height: '100%',
+                gridTemplateColumns: remoteStreams.size === 1 ? '1fr' : isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: isMobile ? 2 : 4, height: '100%',
               }}>
                 {Array.from(remoteStreams.entries()).map(([peerId, stream]) => (
                   <RemoteVideoTile key={peerId} peerId={peerId} peerName={dms.find(d => d.id === peerId)?.name ?? peerId} stream={stream} isScreenShare={remoteScreenSharers.has(peerId)} />
@@ -1004,8 +1006,8 @@ export function ChatPage() {
 
             {/* Local video (picture-in-picture, bottom-right) */}
             <div style={{
-              position: 'absolute', bottom: 20, right: 20,
-              width: 160, height: 120, borderRadius: 10, overflow: 'hidden',
+              position: 'absolute', bottom: isMobile ? 12 : 20, right: isMobile ? 12 : 20,
+              width: isMobile ? 100 : 160, height: isMobile ? 75 : 120, borderRadius: isMobile ? 8 : 10, overflow: 'hidden',
               border: '2px solid rgba(255,255,255,0.2)',
               boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
               background: '#1a1d21',
@@ -1030,7 +1032,7 @@ export function ChatPage() {
             </div>
 
             {/* Top bar */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: isMobile ? '12px 14px' : '16px 20px', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
                 {incomingCall
@@ -1053,7 +1055,7 @@ export function ChatPage() {
           {/* Call controls */}
           {callState === 'incoming' ? (
             /* Incoming call accept/decline */
-            <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', gap: 32, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '24px', display: 'flex', justifyContent: 'center', gap: isMobile ? 48 : 32, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
               <button
                 onClick={() => hangUp(true)}
                 title="Decline"
@@ -1071,7 +1073,7 @@ export function ChatPage() {
             </div>
           ) : (
             /* In-call controls */
-            <div style={{ padding: '20px 32px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ padding: isMobile ? '16px 12px env(safe-area-inset-bottom, 8px)' : '20px 32px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? 8 : 12, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
               {[
                 { label: isMuted ? 'Unmute' : 'Mute', icon: <MicIcon off={isMuted} />, active: isMuted, onClick: toggleMute, danger: false },
                 { label: isCameraOff ? 'Start video' : 'Stop video', icon: <VideoIcon off={isCameraOff} />, active: isCameraOff, onClick: toggleCamera, danger: false },
@@ -1112,8 +1114,28 @@ export function ChatPage() {
         </div>
       )}
 
+      {/* ── Mobile sidebar backdrop ──────────────────────────────── */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: 'absolute', inset: 0, zIndex: 49, background: 'rgba(0,0,0,0.5)' }}
+        />
+      )}
+
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside style={{ width: 240, display: 'flex', flexDirection: 'column', background: '#1a1d21', borderRight: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, overflow: 'hidden' }}>
+      <aside style={{
+        width: isMobile ? '80vw' : 240,
+        maxWidth: 300,
+        display: 'flex', flexDirection: 'column',
+        background: '#1a1d21', borderRight: '1px solid rgba(255,255,255,0.08)',
+        flexShrink: 0, overflow: 'hidden',
+        ...(isMobile ? {
+          position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 50,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.25s ease',
+          boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.4)' : 'none',
+        } : {}),
+      }}>
         <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>Agora</span>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: wsConnected ? '#2bac76' : 'rgba(255,255,255,0.25)' }} title={wsConnected ? 'Live' : 'Offline'} />
@@ -1176,7 +1198,7 @@ export function ChatPage() {
                         <div style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: dm.online ? '#2bac76' : 'rgba(255,255,255,0.15)', border: '1.5px solid #1a1d21' }} />
                       </div>
                       <span
-                        onClick={() => { setActiveDMId(dm.id); setDmSearch(''); }}
+                        onClick={() => { setActiveDMId(dm.id); setDmSearch(''); if (isMobile) setSidebarOpen(false); }}
                         style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, color: 'rgba(255,255,255,0.75)', cursor: 'pointer' }}
                       >
                         {dm.name}
@@ -1227,7 +1249,7 @@ export function ChatPage() {
               {channels.map((ch) => {
                 const isActive = !activeDMId && activeChannelId === ch.id;
                 return (
-                  <button key={ch.id} onClick={() => { setActiveChannelId(ch.id); setActiveDMId(null); }}
+                  <button key={ch.id} onClick={() => { setActiveChannelId(ch.id); setActiveDMId(null); if (isMobile) setSidebarOpen(false); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '5px 12px 5px 16px', background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: isActive ? '#fff' : ch.unread ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: ch.unread ? 700 : isActive ? 600 : 400, fontSize: 14, cursor: 'pointer', textAlign: 'left', borderRadius: 4, marginBottom: 1 }}>
                     <span style={{ opacity: 0.45 }}>#</span>
                     <span style={{ flex: 1 }}>{ch.name}</span>
@@ -1255,7 +1277,7 @@ export function ChatPage() {
                       <div style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: dm.online ? '#2bac76' : 'rgba(255,255,255,0.15)', border: '1.5px solid #1a1d21' }} />
                     </div>
                     <span
-                      onClick={() => setActiveDMId(dm.id)}
+                      onClick={() => { setActiveDMId(dm.id); if (isMobile) setSidebarOpen(false); }}
                       style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, color: isActive ? '#fff' : dm.unread ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: dm.unread ? 700 : isActive ? 600 : 400, cursor: 'pointer' }}
                     >
                       {dm.name}
@@ -1290,8 +1312,20 @@ export function ChatPage() {
       {/* ── Main chat area ───────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
         {/* Channel header */}
-        <div style={{ padding: '0 20px', height: 49, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--color-text)' }}>
+        <div style={{ padding: isMobile ? '0 12px' : '0 20px', height: 49, display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="20" height="20">
+                <line x1="3" y1="5" x2="17" y2="5" />
+                <line x1="3" y1="10" x2="17" y2="10" />
+                <line x1="3" y1="15" x2="17" y2="15" />
+              </svg>
+            </button>
+          )}
+          <span style={{ fontWeight: 700, fontSize: isMobile ? 15 : 16, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activeDMId
               ? activeDM?.name
               : <><span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}># </span>{activeChannelId}</>}
@@ -1313,7 +1347,7 @@ export function ChatPage() {
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-2)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)'; }}
             >
               <VideoIcon />
-              <span>Video call</span>
+              {!isMobile && <span>Video call</span>}
             </button>
           )}
 
@@ -1324,7 +1358,7 @@ export function ChatPage() {
               title={`Start group call in #${activeChannelId}`}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 6, border: '1px solid var(--color-border)',
+                padding: isMobile ? '5px 8px' : '5px 12px', borderRadius: 6, border: '1px solid var(--color-border)',
                 background: 'var(--color-bg)', cursor: 'pointer', fontSize: 13,
                 fontWeight: 500, color: 'var(--color-text-2)', transition: 'all 0.15s',
               }}
@@ -1332,7 +1366,7 @@ export function ChatPage() {
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-2)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)'; }}
             >
               <VideoIcon />
-              <span>Start call</span>
+              {!isMobile && <span>Start call</span>}
             </button>
           )}
 
@@ -1342,7 +1376,7 @@ export function ChatPage() {
         </div>
 
         {/* Messages list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 10px' : '16px 20px', WebkitOverflowScrolling: 'touch' as never }}>
           {messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--color-text-muted)' }}>
               <div style={{ fontSize: 48 }}>{activeDMId ? '💬' : '#️⃣'}</div>
@@ -1401,7 +1435,7 @@ export function ChatPage() {
         </div>
 
         {/* Input area */}
-        <div style={{ padding: '8px 20px 14px', flexShrink: 0 }}>
+        <div className="chat-input-area" style={{ padding: isMobile ? '6px 10px 10px' : '8px 20px 14px', flexShrink: 0 }}>
           <div style={{ border: '1px solid var(--color-border-strong)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: 'var(--shadow-xs)' }}>
             <textarea
               ref={textareaRef}
@@ -1410,7 +1444,7 @@ export function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder={`Message ${activeName}`}
               rows={1}
-              style={{ display: 'block', width: '100%', padding: '10px 14px', border: 'none', resize: 'none', fontFamily: 'var(--font)', fontSize: 14, color: 'var(--color-text)', outline: 'none', background: 'var(--color-bg)', maxHeight: 160, overflowY: 'auto', lineHeight: 1.5, boxSizing: 'border-box' }}
+              style={{ display: 'block', width: '100%', padding: isMobile ? '10px 12px' : '10px 14px', border: 'none', resize: 'none', fontFamily: 'var(--font)', fontSize: isMobile ? 16 : 14, color: 'var(--color-text)', outline: 'none', background: 'var(--color-bg)', maxHeight: 160, overflowY: 'auto', lineHeight: 1.5, boxSizing: 'border-box' }}
               onInput={(e) => {
                 const el = e.currentTarget;
                 el.style.height = 'auto';
@@ -1441,7 +1475,7 @@ export function ChatPage() {
               </button>
             </div>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, paddingLeft: 2 }}>
+          <div className="chat-input-hint" style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, paddingLeft: 2 }}>
             Enter to send · Shift+Enter for new line
           </div>
         </div>
@@ -1540,11 +1574,17 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* Pulse animation keyframe */}
+      {/* Pulse animation keyframe + mobile styles */}
       <style>{`
         @keyframes pulse-ring {
           0% { transform: scale(1); opacity: 0.6; }
           100% { transform: scale(2.5); opacity: 0; }
+        }
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+          .chat-input-area { padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
+        }
+        @media (max-width: 767px) {
+          .chat-input-hint { display: none !important; }
         }
       `}</style>
     </div>
