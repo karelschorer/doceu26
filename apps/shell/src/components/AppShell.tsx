@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
@@ -93,15 +94,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Close nav on route change (mobile)
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
 
   function handleLogout() {
     logout();
     navigate('/login');
   }
 
+  // Find current page label
+  const currentLabel =
+    NAV_ITEMS.find((item) => location.pathname.startsWith(item.path))?.label ??
+    (location.pathname === '/' ? 'Home' : location.pathname.startsWith('/admin') ? 'Admin' : 'DocEU26');
+
   return (
     <div className="app-root">
-      <nav className="nav-rail">
+      {/* Mobile top bar */}
+      <div className="mobile-header">
+        <button className="mobile-header-hamburger" onClick={() => setNavOpen(true)}>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width={20} height={20}>
+            <line x1="3" y1="5" x2="17" y2="5" />
+            <line x1="3" y1="10" x2="17" y2="10" />
+            <line x1="3" y1="15" x2="17" y2="15" />
+          </svg>
+        </button>
+        <span className="mobile-header-title">{currentLabel}</span>
+      </div>
+
+      {/* Mobile backdrop */}
+      <div className={`nav-backdrop ${navOpen ? 'open' : ''}`} onClick={() => setNavOpen(false)} />
+
+      <nav className={`nav-rail ${navOpen ? 'open' : ''}`}>
         {/* Header: logo + workspace name */}
         <div className="nav-rail-header">
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flex: 1, minWidth: 0 }}>
