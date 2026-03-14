@@ -1,0 +1,14 @@
+{
+  "name": "@doceu26/sheets-engine",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "yjs": "^13.6.0"
+  }
+}

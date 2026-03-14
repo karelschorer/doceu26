@@ -1,0 +1,16 @@
+syntax = "proto3";
+package collab.v1;
+option go_package = "github.com/doceu26/collab/gen/collab/v1;collabv1";
+
+message JoinDocumentRequest {
+  string document_id = 1;
+  string user_id = 2;
+}
+
+message JoinDocumentResponse {
+  string session_id = 1;
+}
+
+service CollabService {
+  rpc JoinDocument(JoinDocumentRequest) returns (JoinDocumentResponse);
+}

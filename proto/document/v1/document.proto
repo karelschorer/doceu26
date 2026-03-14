@@ -1,0 +1,23 @@
+syntax = "proto3";
+package document.v1;
+option go_package = "github.com/doceu26/document/gen/document/v1;documentv1";
+
+message Document {
+  string id = 1;
+  string title = 2;
+  string owner_id = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+message CreateDocumentRequest {
+  string title = 1;
+}
+
+message CreateDocumentResponse {
+  Document document = 1;
+}
+
+service DocumentService {
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+}

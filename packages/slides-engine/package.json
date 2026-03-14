@@ -1,0 +1,16 @@
+{
+  "name": "@doceu26/slides-engine",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yjs": "^13.6.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

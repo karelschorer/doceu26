@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DocEU26",
+  "version": "0.0.1",
+  "identifier": "eu.doceu26.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev --port 3000",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DocEU26",
+        "width": 1280,
+        "height": 800,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' blob: data:; connect-src 'self' ws://localhost:* http://localhost:* https://*.doceu26.eu"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "notification": {},
+    "fs": {
+      "scope": {
+        "allow": ["$HOME/Documents/DocEU26/**"]
+      }
+    },
+    "shell": {
+      "open": true
+    }
+  }
+}

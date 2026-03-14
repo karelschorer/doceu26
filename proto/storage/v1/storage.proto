@@ -1,0 +1,18 @@
+syntax = "proto3";
+package storage.v1;
+option go_package = "github.com/doceu26/storage/gen/storage/v1;storagev1";
+
+message UploadRequest {
+  string bucket = 1;
+  string key = 2;
+  bytes data = 3;
+  string content_type = 4;
+}
+
+message UploadResponse {
+  string url = 1;
+}
+
+service StorageService {
+  rpc Upload(UploadRequest) returns (UploadResponse);
+}
